@@ -1,4 +1,5 @@
 import React from "react";
+import {Route, Routes, Navigate, useNavigate} from "react-router-dom";
 
 // Импортируем компоненты
 import Header from "./Header";
@@ -9,10 +10,16 @@ import EditProfilePopup from "./EditProfilePopup";
 import EditAvatarPopup from "./EditAvatarPopup";
 import AddPlacePopup from "./AddPlacePopup";
 import PopupWithConfirm from "./PopupWithConfirm";
+import Register from "./Register";
+import Login from "./Login";
+import ProtectedRoute from "./ProtectedRoute";
+import InfoTooltip from "./InfoTooltip";
 import api from "../utils/api";
+import auth from "../utils/auth";
 import {CurrentUserContext} from "../contexts/CurrentUserContext";
 
 export default function App() {
+    // Попапы и отрисовка основной страницы
     const [isEditProfilePopupOpen, setIsEditProfilePopupOpen] = React.useState(false);
     const [isEditAvatarPopupOpen, setIsEditAvatarPopupOpen] = React.useState(false);
     const [isAddPlacePopupOpen, setIsAddPlacePopupOpen] = React.useState(false);
@@ -22,6 +29,13 @@ export default function App() {
     const [deletedCard, setDeletedCard] = React.useState({});
     const [currentUser, setCurrentUser] = React.useState({});
     const [cards, setCards] = React.useState([]);
+    // Авторизация и регистрация
+    const [isInfoTooltipPopupOpen, setIsInfoTooltipPopupOpen] = React.useState(false);
+    const [successReg, setSuccessReg] = React.useState(true);
+    const [isLogin, setIsLogin] = React.useState(false);
+    const [email, setEmail] = React.useState("");
+
+    const navigate = useNavigate();
 
     // Получение от сервера данных профиля и начальных карточек
     React.useEffect(() => {
@@ -59,6 +73,7 @@ export default function App() {
         setIsAddPlacePopupOpen(false);
         setIsImagePopupOpen(false);
         setIsConfirmPopupOpen(false);
+        setIsInfoTooltipPopupOpen(false);
     }
 
     // Закрытие попапов при клике в пустую область
@@ -118,20 +133,102 @@ export default function App() {
             .catch((err) => console.log(err));
     }
 
+    // Функция, регистрирующая пользователя
+    function handleRegister(regData) {
+        auth.register(regData)
+            .then(() => {
+                setSuccessReg(true);
+                navigate("/sign-in");
+            })
+            .catch((err) => {
+                setSuccessReg(false);
+                console.log(err);
+            })
+            .finally(() => {
+                setIsInfoTooltipPopupOpen(true);
+            })
+    }
+
+    // Функция, авторизующая пользователя
+    function handleLogin(loginData) {
+        auth.authorize(loginData)
+            .then((res) => {
+                if (res.token) {
+                    localStorage.setItem("token", res.token);
+                    setIsLogin(true);
+                    navigate("/mesto");
+                }
+            })
+            .catch((err) => {
+                setSuccessReg(false);
+                setIsInfoTooltipPopupOpen(true);
+                console.log(err);
+            })
+    }
+
+    // Функция выхода из профиля
+    function handleLogout() {
+        setIsLogin(false);
+        localStorage.removeItem("token");
+        navigate("/sign-in");
+    }
+
+    // Проверка токена
+    React.useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (token) {
+            auth.checkToken(token)
+                .then((res) => {
+                    setIsLogin(true);
+                    setEmail(res.data.email);
+                    navigate("/react-mesto-auth", {replace: true});
+                })
+                .catch((err) => console.log(err));
+        }
+    }, [navigate]);
+
   return (
     <CurrentUserContext.Provider value={currentUser}>
     <div>
-        <Header />
-        <Main
-            onEditProfile={handleEditProfileClick}
-            onEditAvatar={handleEditAvatarClick}
-            onAddPlace={handleAddPlaceClick}
-            onCardClick={handleCardClick}
-            onCardLike={handleCardLike}
-            onCardDelete={handleCardDelete}
-            cards={cards}
+        <Header
+            userEmail={email}
+            isLogin={isLogin}
+            isLogout={handleLogout}
         />
+
+        <Routes>
+            <Route
+                path="/sign-up"
+                element={<Register handleRegister={handleRegister} />}
+            />
+            <Route
+                path="/sign-in"
+                element={<Login handleLogin={handleLogin} />}
+            />
+            <Route
+                path="*"
+                element={isLogin ? <Navigate to="/react-mesto-auth" /> : <Navigate to="/sign-in" />}
+            />
+            <Route
+                path="/react-mesto-auth"
+                element={
+                    <ProtectedRoute
+                        isLogin={isLogin}
+                        element={Main}
+                        onEditProfile={handleEditProfileClick}
+                        onEditAvatar={handleEditAvatarClick}
+                        onAddPlace={handleAddPlaceClick}
+                        onCardClick={handleCardClick}
+                        onCardLike={handleCardLike}
+                        onCardDelete={handleCardDelete}
+                        cards={cards}
+                    />
+                }
+            />
+        </Routes>
+
         <Footer />
+
         <EditProfilePopup
             isOpen={isEditProfilePopupOpen}
             onClose={closeAllPopups}
@@ -159,6 +256,12 @@ export default function App() {
         <ImagePopup
             card={selectedCard}
             isOpen={isImagePopupOpen}
+            onClose={closeAllPopups}
+            onCloseByClick={closePopupByClick}
+        />
+        <InfoTooltip
+            successReg={successReg}
+            isOpen={isInfoTooltipPopupOpen}
             onClose={closeAllPopups}
             onCloseByClick={closePopupByClick}
         />

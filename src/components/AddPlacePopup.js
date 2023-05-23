@@ -44,7 +44,8 @@ export default function AddPlacePopup({isOpen, onClose, onCloseByClick, onAddPla
                             maxLength="30"
                             onChange={handleInputName}
                             value={name}
-                            required />
+                            required
+                        />
                         <span className="popup__input-error place-input-error"></span>
                     </label>
                     <label className="popup__form-label">
@@ -56,7 +57,8 @@ export default function AddPlacePopup({isOpen, onClose, onCloseByClick, onAddPla
                             placeholder="Ссылка на картинку"
                             onChange={handleInputLink}
                             value={link}
-                            required />
+                            required
+                        />
                         <span className="popup__input-error link-input-error"></span>
                     </label>
         </PopupWithForm>
