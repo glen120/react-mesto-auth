@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useState, useEffect} from "react";
 import {Route, Routes, Navigate, useNavigate} from "react-router-dom";
 
 // Импортируем компоненты
@@ -18,34 +18,39 @@ import api from "../utils/api";
 import auth from "../utils/auth";
 import {CurrentUserContext} from "../contexts/CurrentUserContext";
 
+import successPicture from "../images/success-pict.svg";
+import failurePicture from "../images/failure-pict.svg";
+
 export default function App() {
     // Попапы и отрисовка основной страницы
-    const [isEditProfilePopupOpen, setIsEditProfilePopupOpen] = React.useState(false);
-    const [isEditAvatarPopupOpen, setIsEditAvatarPopupOpen] = React.useState(false);
-    const [isAddPlacePopupOpen, setIsAddPlacePopupOpen] = React.useState(false);
-    const [isConfirmPopupOpen, setIsConfirmPopupOpen] = React.useState(false);
-    const [isImagePopupOpen, setIsImagePopupOpen] = React.useState(false);
-    const [selectedCard, setSelectedCard] = React.useState({});
-    const [deletedCard, setDeletedCard] = React.useState({});
-    const [currentUser, setCurrentUser] = React.useState({});
-    const [cards, setCards] = React.useState([]);
+    const [isEditProfilePopupOpen, setIsEditProfilePopupOpen] = useState(false);
+    const [isEditAvatarPopupOpen, setIsEditAvatarPopupOpen] = useState(false);
+    const [isAddPlacePopupOpen, setIsAddPlacePopupOpen] = useState(false);
+    const [isConfirmPopupOpen, setIsConfirmPopupOpen] = useState(false);
+    const [isImagePopupOpen, setIsImagePopupOpen] = useState(false);
+    const [selectedCard, setSelectedCard] = useState({});
+    const [deletedCard, setDeletedCard] = useState({});
+    const [currentUser, setCurrentUser] = useState({});
+    const [cards, setCards] = useState([]);
     // Авторизация и регистрация
-    const [isInfoTooltipPopupOpen, setIsInfoTooltipPopupOpen] = React.useState(false);
-    const [successReg, setSuccessReg] = React.useState(true);
-    const [isLogin, setIsLogin] = React.useState(false);
-    const [email, setEmail] = React.useState("");
+    const [infoTooltipData, setInfoTooltipData] = useState({successReg: false, message: ""});
+    const [isInfoTooltipPopupOpen, setIsInfoTooltipPopupOpen] = useState(false);
+    const [isLogin, setIsLogin] = useState(false);
+    const [email, setEmail] = useState("");
 
     const navigate = useNavigate();
 
     // Получение от сервера данных профиля и начальных карточек
-    React.useEffect(() => {
-        Promise.all([api.getUserInfo(), api.getInitialCards()])
-            .then(([userData, initialCards]) => {
-                setCurrentUser(userData);
-                setCards(initialCards);
-            })
-            .catch((err) => console.log(err));
-    }, []);
+    useEffect(() => {
+        if (isLogin) {
+            Promise.all([api.getUserInfo(), api.getInitialCards()])
+                .then(([userData, initialCards]) => {
+                    setCurrentUser(userData);
+                    setCards(initialCards);
+                })
+                .catch((err) => console.log(err));
+        }
+    }, [isLogin]);
 
     // Обработчики открытия попапов
     function handleEditProfileClick() {
@@ -137,11 +142,11 @@ export default function App() {
     function handleRegister(regData) {
         auth.register(regData)
             .then(() => {
-                setSuccessReg(true);
+                setInfoTooltipData({successReg: true, message: "Вы успешно зарегистрировались!"});
                 navigate("/sign-in");
             })
             .catch((err) => {
-                setSuccessReg(false);
+                setInfoTooltipData({successReg: false, message: "Что-то пошло не так! Попробуйте ещё раз."});
                 console.log(err);
             })
             .finally(() => {
@@ -160,7 +165,7 @@ export default function App() {
                 }
             })
             .catch((err) => {
-                setSuccessReg(false);
+                setInfoTooltipData({successReg: false, message: "Что-то пошло не так! Попробуйте ещё раз."});
                 setIsInfoTooltipPopupOpen(true);
                 console.log(err);
             })
@@ -174,7 +179,7 @@ export default function App() {
     }
 
     // Проверка токена
-    React.useEffect(() => {
+    useEffect(() => {
         const token = localStorage.getItem("token");
         if (token) {
             auth.checkToken(token)
@@ -189,7 +194,6 @@ export default function App() {
 
   return (
     <CurrentUserContext.Provider value={currentUser}>
-    <div>
         <Header
             userEmail={email}
             isLogin={isLogin}
@@ -260,12 +264,12 @@ export default function App() {
             onCloseByClick={closePopupByClick}
         />
         <InfoTooltip
-            successReg={successReg}
+            infoImage={infoTooltipData.successReg ? successPicture : failurePicture}
+            infoMessage={infoTooltipData.message}
             isOpen={isInfoTooltipPopupOpen}
             onClose={closeAllPopups}
             onCloseByClick={closePopupByClick}
         />
-    </div>
     </CurrentUserContext.Provider>
   );
 }

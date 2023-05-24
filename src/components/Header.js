@@ -18,7 +18,7 @@ export default function Header({isLogin, userEmail, isLogout}) {
                         element={<Link to="/sign-up" className="header__menu-link">Регистрация</Link>}
                     />
                 </Routes>
-                {isLogin && <a href="#" className="header__menu-link" onClick={isLogout}>Выйти</a>}
+                {isLogin && <Link to="/sign-in" className="header__menu-link" onClick={isLogout}>Выйти</Link>}
             </div>
         </header>
 
